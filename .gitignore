@@ -40,3 +40,7 @@ Thumbs.db
 
 # Test outputs
 TestResults/
+
+# Report di copertura generati dai test
+coverage/
+.omc/

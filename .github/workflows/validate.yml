@@ -39,6 +39,12 @@ jobs:
         shell: pwsh
         run: ./scripts/Validate-Links.Tests.ps1
 
+      - name: Pester con copertura (pwsh)
+        shell: pwsh
+        run: |
+          Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force -SkipPublisherCheck
+          ./.github/scripts/Invoke-CoverageRun.ps1
+
   validate-windows-ps5:
     name: Validate Windows PowerShell 5.1
     runs-on: windows-latest
@@ -59,3 +65,9 @@ jobs:
       - name: Run security test suite under Windows PowerShell 5.1
         shell: powershell
         run: .\scripts\Validate-Links.Tests.ps1
+
+      - name: Pester con copertura sotto Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force -SkipPublisherCheck
+          .\.github\scripts\Invoke-CoverageRun.ps1

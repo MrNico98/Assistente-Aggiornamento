@@ -36,6 +36,19 @@ Il repository è strutturato secondo criteri di sicurezza *defense-in-depth* e z
 
 ---
 
+## ⬇️ Download diretto (un clic)
+
+| Chiave | Download | Dimensione |
+|---|---|---|
+| `win11-23h2` | [Scarica .iso](https://archive.org/download/it-it_windows_11_consumer_editions_version_24h2_updated_sep_2025_x64_dvd_6d1ad20d/it-it_windows_11_consumer_editions_version_23h2_updated_sep_2025_x64_dvd_98118d6e.iso) | 7.4 GB |
+| `win11-24h2` | [Scarica .iso](https://archive.org/download/it-it_windows_11_consumer_editions_version_24h2_updated_sep_2025_x64_dvd_6d1ad20d/it-it_windows_11_consumer_editions_version_24h2_updated_sep_2025_x64_dvd_6d1ad20d.iso) | 7.6 GB |
+| `win11-25h2` | [Scarica .iso](https://archive.org/download/it-it_windows_11_consumer_editions_version_24h2_updated_sep_2025_x64_dvd_6d1ad20d/26200.6584.250915-1905.25h2_ge_release_svc_refresh_CLIENT_CONSUMER_x64FRE_it-it.iso) | 7.6 GB |
+| `win11-ltsc` | [Scarica .iso](https://archive.org/download/it-it_windows_11_consumer_editions_version_24h2_updated_sep_2025_x64_dvd_6d1ad20d/it-it_windows_11_enterprise_ltsc_2024_x64_dvd_1e8cabb6.iso) | 5.1 GB |
+
+Il download parte da Archive.org. Dopo averlo scaricato, verifica l'immagine con `Verify-IsoIntegrity.ps1` (vedi sotto) prima di usarla.
+
+---
+
 ## 🚀 Utilizzo e Validazione
 
 ### 1. Validazione del catalogo locale
@@ -47,6 +60,9 @@ Compatibile sia con PowerShell 7+ che con Windows PowerShell 5.1:
 ./scripts/Validate-Links.ps1
 
 # Esecuzione della suite di test di sicurezza (11 test di regressione e sicurezza)
+
+# Suite Pester con copertura (100% degli script)
+./.github/scripts/Invoke-CoverageRun.ps1
 ./scripts/Validate-Links.Tests.ps1
 ```
 

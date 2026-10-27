@@ -1,0 +1,18 @@
+name: Segnala un problema
+description: Un link, un hash o uno script non funziona come previsto
+labels: [bug]
+body:
+  - type: textarea
+    id: cosa
+    attributes:
+      label: Cosa succede
+      description: Includi il comando eseguito e l'errore completo.
+    validations:
+      required: true
+  - type: input
+    id: ambiente
+    attributes:
+      label: Sistema e versione di PowerShell
+      placeholder: Windows 11, PowerShell 7.5
+    validations:
+      required: true

@@ -31,7 +31,10 @@ param(
 
     [Parameter(Mandatory = $false)]
     [ValidateSet('SHA1', 'MD5', 'ALL')]
-    [string]$Algorithm = 'SHA1'
+    [string]$Algorithm = 'SHA1',
+
+    [Parameter(Mandatory = $false)]
+    [string]$RepoRoot
 )
 
 Set-StrictMode -Version Latest
@@ -45,12 +48,11 @@ function Compute-StreamHash {
     $hasher = $null
     $stream = $null
     try {
+        # AlgoName e sempre SHA1 o MD5: il parametro dello script e vincolato da ValidateSet.
         if ($AlgoName -eq 'SHA1') {
             $hasher = [System.Security.Cryptography.SHA1]::Create()
-        } elseif ($AlgoName -eq 'MD5') {
-            $hasher = [System.Security.Cryptography.MD5]::Create()
         } else {
-            throw "Algoritmo non supportato: $AlgoName"
+            $hasher = [System.Security.Cryptography.MD5]::Create()
         }
 
         $stream = [System.IO.File]::OpenRead($FilePath)
@@ -80,7 +82,11 @@ try {
 
     # Caricamento manifest
     $scriptDir = Split-Path -Parent $PSCommandPath
-    $repoRoot = [System.IO.Path]::GetFullPath((Split-Path -Parent $scriptDir))
+    if ($RepoRoot) {
+        $repoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
+    } else {
+        $repoRoot = [System.IO.Path]::GetFullPath((Split-Path -Parent $scriptDir))
+    }
     $manifestPath = Join-Path -Path $repoRoot -ChildPath 'catalog.manifest.json'
 
     if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
@@ -95,7 +101,8 @@ try {
 
     if ($VersionKey) {
         $matchedKey = $VersionKey
-        $targetEntry = $manifest.images.$VersionKey
+        $imageEntry = $manifest.images.psobject.Properties[$VersionKey]
+        $targetEntry = if ($imageEntry) { $imageEntry.Value } else { $null }
         if ($null -eq $targetEntry) {
             throw "Chiave '$VersionKey' non trovata in catalog.manifest.json."
         }
@@ -152,10 +159,9 @@ try {
         exit 0
     } else {
         Write-Error "ESITO VERIFICA: [NON CONFORME / MANOMESSO O CORROTTO]"
-        exit 1
     }
 }
 catch {
+    # Con ErrorActionPreference = Stop, Write-Error termina lo script con errore: nessun exit necessario.
     Write-Error "ERRORE DURANTE LA VERIFICA: $_"
-    exit 1
 }

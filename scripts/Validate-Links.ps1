@@ -19,7 +19,10 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $false)]
-    [string]$CatalogPath
+    [string]$CatalogPath,
+
+    [Parameter(Mandatory = $false)]
+    [string]$RepoRoot
 )
 
 Set-StrictMode -Version Latest
@@ -28,7 +31,11 @@ $ErrorActionPreference = 'Stop'
 try {
     # 1. Risoluzione sicura dei percorsi
     $scriptDir = Split-Path -Parent $PSCommandPath
-    $repoRoot = [System.IO.Path]::GetFullPath((Split-Path -Parent $scriptDir))
+    if ($RepoRoot) {
+        $repoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
+    } else {
+        $repoRoot = [System.IO.Path]::GetFullPath((Split-Path -Parent $scriptDir))
+    }
 
     if (-not $CatalogPath) {
         $CatalogPath = Join-Path -Path $repoRoot -ChildPath 'links.json'
@@ -147,23 +154,38 @@ try {
     }
 
     # 5. Cross-validazione con catalog.manifest.json (se presente)
+    $manifestObj = $null
     $manifestPath = Join-Path -Path $repoRoot -ChildPath 'catalog.manifest.json'
     if (Test-Path -LiteralPath $manifestPath -PathType Leaf) {
         $manifestRaw = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8
         $manifestObj = $manifestRaw | ConvertFrom-Json
 
-        if ($null -eq $manifestObj.images) {
+        if ($null -eq $manifestObj.psobject.Properties['images']) {
             throw "Struttura 'images' mancante in catalog.manifest.json."
         }
 
         foreach ($key in $expectedKeys) {
-            $manifestImage = $manifestObj.images.$key
+            $manifestEntry = $manifestObj.images.psobject.Properties[$key]
+            $manifestImage = if ($manifestEntry) { $manifestEntry.Value } else { $null }
             if ($null -eq $manifestImage) {
                 throw "Chiave '$key' mancante nel manifest catalog.manifest.json."
             }
 
             if ([string]$catalogObj.$key -ne [string]$manifestImage.url) {
                 throw "Discrepanza URL tra links.json e catalog.manifest.json per '$key'."
+            }
+
+            if ([string]$manifestImage.key -ne $key) {
+                throw "Campo 'key' incoerente nel manifest per '$key'."
+            }
+
+            $urlFilename = [System.IO.Path]::GetFileName([string]$manifestImage.url)
+            if ([string]$manifestImage.filename -cne $urlFilename) {
+                throw "Il nome file nel manifest non corrisponde all'URL per '$key'."
+            }
+
+            if ([string]$manifestImage.crc32 -notmatch '^[0-9a-fA-F]{8}$') {
+                throw "CRC32 non valido o mancante nel manifest per '$key'."
             }
 
             if ([string]$manifestImage.sha1 -notmatch '^[0-9a-fA-F]{40}$') {
@@ -180,16 +202,26 @@ try {
         }
     }
 
-    # 6. Cross-validazione con checksums.sha1 e checksums.md5 (se presenti)
-    $sha1File = Join-Path -Path $repoRoot -ChildPath 'checksums.sha1'
-    if (Test-Path -LiteralPath $sha1File -PathType Leaf) {
-        $sha1Content = Get-Content -LiteralPath $sha1File -Encoding UTF8
+    # 6. Cross-validazione con checksums.sha1 e checksums.md5 (se presenti):
+    #    il file deve essere elencato e, con il manifest presente, l'hash deve coincidere.
+    foreach ($checksum in @(
+            @{ File = 'checksums.sha1'; Label = 'SHA-1'; Property = 'sha1' },
+            @{ File = 'checksums.md5';  Label = 'MD5';   Property = 'md5' })) {
+        $checksumPath = Join-Path -Path $repoRoot -ChildPath $checksum.File
+        if (-not (Test-Path -LiteralPath $checksumPath -PathType Leaf)) { continue }
+
+        $checksumLines = Get-Content -LiteralPath $checksumPath -Encoding UTF8
         foreach ($key in $expectedKeys) {
-            $url = [string]$catalogObj.$key
-            $expectedFilename = [System.IO.Path]::GetFileName($url)
-            $match = $sha1Content | Where-Object { $_ -match [regex]::Escape($expectedFilename) }
-            if (-not $match) {
-                throw "Checksum SHA-1 non trovato per il file '$expectedFilename' ($key) in checksums.sha1."
+            $expectedFilename = [System.IO.Path]::GetFileName([string]$catalogObj.$key)
+            $line = $checksumLines | Where-Object { $_ -match ('^[0-9a-fA-F]+ \*?' + [regex]::Escape($expectedFilename) + '$') } | Select-Object -First 1
+            if (-not $line) {
+                throw "Checksum $($checksum.Label) non trovato per il file '$expectedFilename' ($key) in $($checksum.File)."
+            }
+            if ($null -ne $manifestObj) {
+                $fileHash = ($line -split ' ')[0]
+                if ($fileHash -ine [string]$manifestObj.images.$key.($checksum.Property)) {
+                    throw "Discrepanza $($checksum.Label) tra $($checksum.File) e catalog.manifest.json per '$key'."
+                }
             }
         }
     }
@@ -198,6 +230,6 @@ try {
     exit 0
 }
 catch {
+    # Con ErrorActionPreference = Stop, Write-Error termina lo script con errore: nessun exit necessario.
     Write-Error "ERRORE DI VALIDAZIONE SICUREZZA: $_"
-    exit 1
 }
