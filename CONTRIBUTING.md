@@ -4,7 +4,7 @@
 2. Prima di inviare, esegui in locale (PowerShell 7 o Windows PowerShell 5.1):
    ```powershell
    ./scripts/Validate-Links.ps1
-   Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force -SkipPublisherCheck
+   ./.github/scripts/Install-Pester.ps1
    ./.github/scripts/Invoke-CoverageRun.ps1
    ```
    La copertura dei due script in `scripts/` deve restare al 100%: ogni nuova regola ha un test positivo e uno negativo in `tests/`.

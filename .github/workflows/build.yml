@@ -24,7 +24,7 @@ jobs:
       - name: Test con copertura (Pester)
         shell: pwsh
         run: |
-          Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force -SkipPublisherCheck
+          ./.github/scripts/Install-Pester.ps1
           ./.github/scripts/Invoke-CoverageRun.ps1
       - name: Cache SonarQube packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
